@@ -26,85 +26,64 @@ const int tupleValue[64] = {
         0,  0,  0,  0,  0,  0,  0,  0
 };
 
-int field2tupleCount[7][6];
-int field2tuple[7][6][13];
+int *field2tuple[7][6][14];
 int tuple[69];
 
-void initFieldToTuple(void) {
-    int tupleId = 0;
-    int index;
+void addTupleReference(int **fieldToTuple, int *tupleReference) {
+    int **p = fieldToTuple;
+    while (*p) {
+        ++p;
+    }
+    *p = tupleReference;
+}
 
+void initFieldToTuple(void) {
     for (int col=0; col < 7; col++) {
         for (int row=0; row < 6; row++) {
-            field2tupleCount[col][row] = 0;
-            for (int i=0; i < 13; ++i) {
-                field2tuple[col][row][i] = 0;
-            }
+                *field2tuple[col][row] = 0;
         }
     }
 
+    int *tupleRef = tuple;
     //vertical tuples
     for (int col=0; col < 7; col++) {
         for (int row=0; row < 6-3; row++) {
-
-            index = field2tupleCount[col][row]++;
-            field2tuple[col][row][index] = tupleId;
-            index = field2tupleCount[col][row+1]++;
-            field2tuple[col][row+1][index] = tupleId;
-            index = field2tupleCount[col][row+2]++;
-            field2tuple[col][row+2][index] = tupleId;
-            index = field2tupleCount[col][row+3]++;
-            field2tuple[col][row+3][index] = tupleId;
-
-            tupleId++;
+            addTupleReference(field2tuple[col][row], tupleRef);
+            addTupleReference(field2tuple[col][row+1], tupleRef);
+            addTupleReference(field2tuple[col][row+2], tupleRef);
+            addTupleReference(field2tuple[col][row+3], tupleRef);
+            tupleRef++;
         }
     }
     //horizontal tuples
     for (int row=0; row < 6; row++) {
         for (int col=0; col < 7-3; col++) {
-
-            index = field2tupleCount[col][row]++;
-            field2tuple[col][row][index] = tupleId;
-            index = field2tupleCount[col+1][row]++;
-            field2tuple[col+1][row][index] = tupleId;
-            index = field2tupleCount[col+2][row]++;
-            field2tuple[col+2][row][index] = tupleId;
-            index = field2tupleCount[col+3][row]++;
-            field2tuple[col+3][row][index] = tupleId;
-
-            tupleId++;
+            addTupleReference(field2tuple[col][row], tupleRef);
+            addTupleReference(field2tuple[col+1][row], tupleRef);
+            addTupleReference(field2tuple[col+2][row], tupleRef);
+            addTupleReference(field2tuple[col+3][row], tupleRef);
+            tupleRef++;
         }
     }
     //diagonal tuples
     for (int col=0; col < 7-3; col++) {
         for (int row=0; row < 6-3 ; row++) {
-            index = field2tupleCount[col][row]++;
-            field2tuple[col][row][index] = tupleId;
-            index = field2tupleCount[col+1][row+1]++;
-            field2tuple[col+1][row+1][index] = tupleId;
-            index = field2tupleCount[col+2][row+2]++;
-            field2tuple[col+2][row+2][index] = tupleId;
-            index = field2tupleCount[col+3][row+3]++;
-            field2tuple[col+3][row+3][index] = tupleId;
-
-            tupleId++;
+            addTupleReference(field2tuple[col][row], tupleRef);
+            addTupleReference(field2tuple[col+1][row+1], tupleRef);
+            addTupleReference(field2tuple[col+2][row+2], tupleRef);
+            addTupleReference(field2tuple[col+3][row+3], tupleRef);
+            tupleRef++;
         }
     }
 
     //other diagonal tuples
     for (int col=7-4; col < 7; col++) {
         for (int row=0; row < 6-3 ; row++) {
-
-            index = field2tupleCount[col][row]++;
-            field2tuple[col][row][index] = tupleId;
-            index = field2tupleCount[col-1][row+1]++;
-            field2tuple[col-1][row-1][index] = tupleId;
-            index = field2tupleCount[col-2][row+2]++;
-            field2tuple[col-2][row-2][index] = tupleId;
-            index = field2tupleCount[col-3][row+3]++;
-            field2tuple[col-3][row-3][index] = tupleId;
-
-            tupleId++;
+            addTupleReference(field2tuple[col][row], tupleRef);
+            addTupleReference(field2tuple[col-1][row+1], tupleRef);
+            addTupleReference(field2tuple[col-2][row+2], tupleRef);
+            addTupleReference(field2tuple[col-3][row+3], tupleRef);
+            tupleRef++;
         }
     }
 }
@@ -135,19 +114,14 @@ void doMove(int col) {
     int row = top[col]++;
     board[col][row] = clr;
     int clrBit = 1 << (clr+2);
-    for (int i=0; i<field2tupleCount[col][row]; ++i) {
-        int tupleIndex = field2tuple[col][row][i];
-        tuple[tupleIndex] += clrBit;
-        int tf = tuple[tupleIndex];
-        eval += tupleValue[tf];
-    }
     clr = -clr;
 
-//    int *tuple = field2Tuple[col][row];
-//    while (*tuple++) {
-//        *tuple += clrBit;
-//        eval += tupleValue(*tuple);
-//    }
+    int **tuple = field2tuple[col][row];
+    while (*tuple) {
+        **tuple += clrBit;
+        eval += tupleValue[**tuple];
+        tuple++;
+    }
 }
 
 void undoMove(int col) {
@@ -155,11 +129,12 @@ void undoMove(int col) {
     board[col][row] = 0;
     clr = -clr;
     int clrBit = 1 << (clr+2);
-    for (int i=0; i<field2tupleCount[col][row]; ++i) {
-        int tupleIndex = field2tuple[col][row][i];
-        int tf = tuple[tupleIndex];
-        tuple[tupleIndex] -= clrBit;
-        eval -= tupleValue[tf];
+
+    int **tuple = field2tuple[col][row];
+    while (*tuple) {
+        eval -= tupleValue[**tuple];
+        **tuple -= clrBit;
+        tuple++;
     }
 }
 

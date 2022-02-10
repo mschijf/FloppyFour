@@ -105,19 +105,10 @@ void initBoard(void) {
     eval = 0;
 }
 
-
-//#define doMove(c)        (board[c][top[c]++] = (clr), (clr) = (-clr))
-//#define undoMove(c)    (board[c][--top[c]] = 0, (clr) = (-clr))
-
 long nodeCount;
 
-void doMove(int col) {
-    int row = top[col]++;
-    board[col][row] = clr;
+void addColorToTuples(int **tuple, int clr) {
     int clrBit = (clr < 0 ? 1 : 8);
-    clr = -clr;
-
-    int **tuple = field2tuple[col][row];
     while (*tuple) {
         **tuple += clrBit;
         eval += tupleValue[**tuple];
@@ -125,18 +116,27 @@ void doMove(int col) {
     }
 }
 
-void undoMove(int col) {
-    int row = --top[col];
-    board[col][row] = 0;
-    clr = -clr;
+void removeColorFromTuples(int **tuple, int clr) {
     int clrBit = (clr < 0 ? 1 : 8);
-
-    int **tuple = field2tuple[col][row];
     while (*tuple) {
         eval -= tupleValue[**tuple];
         **tuple -= clrBit;
         tuple++;
     }
+}
+
+void doMove(int col) {
+    int row = top[col]++;
+    board[col][row] = clr;
+    addColorToTuples(field2tuple[col][row], clr);
+    clr = -clr;
+}
+
+void undoMove(int col) {
+    int row = --top[col];
+    board[col][row] = 0;
+    clr = -clr;
+    removeColorFromTuples(field2tuple[col][row], clr);
 }
 
 
